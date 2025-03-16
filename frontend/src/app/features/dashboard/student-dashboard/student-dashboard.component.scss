@@ -1,0 +1,48 @@
+.shadow-sm {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+.card {
+  transition: transform 0.2s ease-in-out;
+  
+  &:hover {
+    transform: translateY(-3px);
+  }
+}
+
+.chart-container {
+  position: relative;
+  height: 250px;
+  width: 100%;
+}
+
+h3 {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.text-muted {
+  font-size: 0.9rem;
+}
+
+.badge {
+  padding: 0.5em 0.75em;
+  font-weight: 500;
+}
+
+.table {
+  font-size: 0.95rem;
+  
+  th {
+    font-weight: 600;
+    color: #495057;
+  }
+}
+
+.card-header {
+  padding: 1rem 1.25rem;
+  
+  h5 {
+    font-weight: 600;
+  }
+} 
