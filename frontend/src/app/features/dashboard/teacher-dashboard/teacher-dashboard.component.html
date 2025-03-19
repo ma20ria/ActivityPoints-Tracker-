@@ -129,9 +129,16 @@
           
           <div class="mb-4">
             <h6 class="mb-2">Certificate Preview</h6>
-            <div class="certificate-preview">
-              <p class="text-muted text-center">Certificate preview would be displayed here.</p>
+            <div *ngIf="selectedActivity?.certificateFile">
+              <a [href]="getCertificateUrl(selectedActivity.certificateFile)" 
+                 target="_blank" 
+                 class="btn btn-primary"
+                 [class.disabled]="!selectedActivity.certificateFile">
+                <i class="bi bi-file-earmark-pdf me-2"></i>View Certificate
+              </a>
+              <small class="d-block mt-2 text-muted">Click to open certificate in a new tab</small>
             </div>
+            <p *ngIf="!selectedActivity?.certificateFile" class="text-muted">No certificate available</p>
           </div>
           
           <form [formGroup]="reviewForm">
@@ -153,14 +160,15 @@
               </div>
             </div>
             
-            <div class="mb-3" *ngIf="reviewForm.get('status')?.value === 'approved'">
-              <label for="pointsAwarded" class="form-label">Points to Award</label>
-              <input type="number" class="form-input" id="pointsAwarded" formControlName="pointsAwarded" min="0" max="100">
+            <div class="mb-3">
+              <label for="pointsAwarded" class="form-label">Activity Points</label>
+              <input type="number" class="form-control bg-light" id="pointsAwarded" [value]="selectedActivity.points" readonly>
+              <small class="text-muted">Points calculated based on activity type and level</small>
             </div>
             
             <div class="mb-3">
               <label for="feedback" class="form-label">Feedback (Optional)</label>
-              <textarea class="form-input" id="feedback" formControlName="feedback" rows="3" placeholder="Provide feedback to the student"></textarea>
+              <textarea class="form-control" id="feedback" formControlName="feedback" rows="3" placeholder="Provide feedback to the student"></textarea>
             </div>
           </form>
         </div>

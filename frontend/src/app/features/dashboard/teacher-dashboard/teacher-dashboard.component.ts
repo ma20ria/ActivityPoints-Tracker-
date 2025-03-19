@@ -7,6 +7,7 @@ import { ActivityService } from '../../../core/services/activity.service';
 import { NavbarComponent } from '../../../ui/navbar/navbar.component';
 import { User } from '../../../core/models/user.model';
 import { Activity } from '../../../core/models/activity.model';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-teacher-dashboard',
@@ -34,7 +35,6 @@ export class TeacherDashboardComponent implements OnInit {
   ) {
     this.reviewForm = this.fb.group({
       status: ['approved'],
-      pointsAwarded: [0],
       feedback: ['']
     });
   }
@@ -49,13 +49,28 @@ export class TeacherDashboardComponent implements OnInit {
     return typeof student === 'object';
   }
 
+  // Helper method to get the correct certificate URL
+  getCertificateUrl(certificateFile: string): string {
+    // Ensure we have a valid certificate file path
+    if (!certificateFile) {
+      return '';
+    }
+    
+    // The backend serves files from /uploads
+    return `http://localhost:5000/${certificateFile}`;
+  }
+
   loadPendingActivities(): void {
     this.isLoading = true;
     
     this.activityService.getPendingActivities().subscribe({
       next: (response) => {
         if (response && response.data) {
-          this.pendingActivities = response.data;
+          // Ensure points are properly set for each activity
+          this.pendingActivities = response.data.map(activity => ({
+            ...activity,
+            points: activity.points || this.calculateActivityPoints(activity)
+          }));
           
           // Update stats from the response
           if (response.stats) {
@@ -81,6 +96,30 @@ export class TeacherDashboardComponent implements OnInit {
     });
   }
 
+  // Helper method to calculate points based on activity type and level
+  private calculateActivityPoints(activity: Activity): number {
+    const sportsPointsMap: { [key: number]: number } = {
+      1: 8,
+      2: 15,
+      3: 25,
+      4: 40,
+      5: 50
+    };
+
+    switch (activity.activityType) {
+      case 'sports':
+        return activity.level ? sportsPointsMap[activity.level] || 0 : 0;
+      case 'mooc':
+        return 50;
+      case 'workshops':
+        return 6;
+      case 'internships':
+        return 20;
+      default:
+        return 0;
+    }
+  }
+
   calculateStats(): void {
     // Calculate stats based on actual data
     this.totalPendingRequests = this.pendingActivities.length;
@@ -94,10 +133,9 @@ export class TeacherDashboardComponent implements OnInit {
   selectActivity(activity: Activity): void {
     this.selectedActivity = activity;
     
-    // Reset form
+    // Set form values
     this.reviewForm.patchValue({
       status: 'approved',
-      pointsAwarded: 0,
       feedback: ''
     });
   }
@@ -107,7 +145,11 @@ export class TeacherDashboardComponent implements OnInit {
       return;
     }
     
-    const reviewData = this.reviewForm.value;
+    const reviewData = {
+      status: this.reviewForm.get('status')?.value || 'pending',
+      pointsAwarded: this.selectedActivity.points,  // Use the points from the activity
+      feedback: this.reviewForm.get('feedback')?.value || ''
+    };
     
     this.activityService.reviewActivity(this.selectedActivity._id, reviewData).subscribe({
       next: (response) => {
@@ -125,7 +167,6 @@ export class TeacherDashboardComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error submitting review:', error);
-        // You could add error handling here, such as displaying an error message
       }
     });
   }

@@ -27,6 +27,7 @@ export class StudentDashboardComponent implements OnInit {
   approvedActivities: number = 0;
   rejectedActivities: number = 0;
   totalPoints: number = 0;
+  categoryPoints: number = 0;
   
   // Doughnut chart
   public doughnutChartData: ChartData<'doughnut'> = {
@@ -118,8 +119,12 @@ export class StudentDashboardComponent implements OnInit {
     this.rejectedActivities = this.activities.filter(a => a.status === 'rejected').length;
     
     this.totalPoints = this.activities
-      .filter(a => a.status === 'approved')
-      .reduce((sum, activity) => sum + activity.pointsAwarded, 0);
+      .filter(activity => activity.status === 'approved')
+      .reduce((sum, activity) => sum + (activity.pointsAwarded || 0), 0);
+
+    this.categoryPoints = this.activities
+      .filter(activity => activity.status === 'approved')
+      .reduce((sum, activity) => sum + (activity.pointsAwarded || 0), 0);
   }
 
   updateCharts(): void {
@@ -133,18 +138,16 @@ export class StudentDashboardComponent implements OnInit {
     // Update bar chart with points by semester
     const semesters = [1, 2, 3, 4, 5, 6, 7, 8];
     const pointsBySemester = semesters.map(semester => {
-      // For this demo, we'll assign activities to semesters based on a simple algorithm
-      // In a real app, you might have a semester field in the activity model
       return this.activities
         .filter(a => a.status === 'approved' && this.getSemesterFromDate(a.date) === semester)
-        .reduce((sum, activity) => sum + activity.pointsAwarded, 0);
+        .reduce((sum, activity) => sum + (activity.pointsAwarded || 0), 0);
     });
     
     this.barChartData.datasets[0].data = pointsBySemester;
   }
   
   // Helper method to determine semester from activity date
-  getSemesterFromDate(date: Date): number {
+  getSemesterFromDate(date: Date | string): number {
     const activityDate = new Date(date);
     const currentYear = new Date().getFullYear();
     const activityYear = activityDate.getFullYear();

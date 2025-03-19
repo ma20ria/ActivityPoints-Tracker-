@@ -31,14 +31,7 @@ export class ActivityListComponent implements OnInit {
   statusFilter: string = 'all';
   typeFilter: string = 'all';
   
-  activityTypes = [
-    'Sports', 
-    'Cultural', 
-    'Technical', 
-    'Professional Development', 
-    'Community Service',
-    'Other'
-  ];
+  activityTypes = ['sports', 'mooc', 'workshops', 'internships'];
 
   constructor(
     private authService: AuthService,
@@ -78,8 +71,8 @@ export class ActivityListComponent implements OnInit {
     this.rejectedActivities = this.activities.filter(a => a.status === 'rejected').length;
     
     this.totalPoints = this.activities
-      .filter(a => a.status === 'approved')
-      .reduce((sum, activity) => sum + activity.pointsAwarded, 0);
+      .filter(activity => activity.status === 'approved')
+      .reduce((sum, activity) => sum + (activity.pointsAwarded || 0), 0);
   }
   
   filterActivities(): Activity[] {

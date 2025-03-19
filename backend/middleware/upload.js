@@ -11,10 +11,12 @@ if (!fs.existsSync(uploadsDir)) {
 // Set storage engine
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
-    cb(null, 'uploads/certificates/');
+    cb(null, path.join(__dirname, '../uploads/certificates'));
   },
   filename: function(req, file, cb) {
-    cb(null, `${Date.now()}-${file.originalname}`);
+    // Clean the original filename to remove spaces and special characters
+    const cleanFileName = file.originalname.replace(/[^a-zA-Z0-9.]/g, '-');
+    cb(null, `${Date.now()}-${cleanFileName}`);
   }
 });
 

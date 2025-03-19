@@ -7,9 +7,10 @@ const fs = require('fs');
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('Created uploads directory');
+const certificatesDir = path.join(uploadsDir, 'certificates');
+if (!fs.existsSync(certificatesDir)) {
+  fs.mkdirSync(certificatesDir, { recursive: true });
+  console.log('Created uploads/certificates directory');
 }
 
 // Route files

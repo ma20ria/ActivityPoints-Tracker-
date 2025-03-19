@@ -23,18 +23,18 @@ export class ActivitySubmitComponent implements OnInit {
   errorMessage = '';
   successMessage = '';
   selectedFile: File | null = null;
-  extractedData: any = null;
+  calculatedPoints = 0;
   
-  activityTypes = [
-    'Sports', 
-    'Cultural', 
-    'Technical', 
-    'Professional Development', 
-    'Community Service',
-    'Other'
-  ];
-  
+  activityTypes = ['sports', 'mooc', 'workshops', 'internships'];
   levels = [1, 2, 3, 4, 5];
+
+  private sportsPointsMap: Record<number, number> = {
+    1: 8,
+    2: 15,
+    3: 25,
+    4: 40,
+    5: 50
+  };
 
   constructor(
     private fb: FormBuilder,
@@ -49,8 +49,18 @@ export class ActivitySubmitComponent implements OnInit {
       description: ['', Validators.required],
       eventOrganizer: ['', Validators.required],
       date: ['', Validators.required],
-      level: ['', Validators.required],
-      certificateFile: ['', Validators.required]
+      level: [''],
+      points: [0, Validators.required]
+    });
+
+    // Calculate points when activity type or level changes
+    this.activityForm.get('activityType')?.valueChanges.subscribe(() => {
+      this.calculatePoints();
+      this.updateLevelValidation();
+    });
+
+    this.activityForm.get('level')?.valueChanges.subscribe(() => {
+      this.calculatePoints();
     });
   }
 
@@ -58,55 +68,74 @@ export class ActivitySubmitComponent implements OnInit {
     this.currentUser = this.authService.getCurrentUser();
   }
 
+  updateLevelValidation(): void {
+    const activityType = this.activityForm.get('activityType')?.value;
+    const levelControl = this.activityForm.get('level');
+
+    if (activityType === 'sports') {
+      levelControl?.setValidators([Validators.required]);
+    } else {
+      levelControl?.clearValidators();
+    }
+    levelControl?.updateValueAndValidity();
+  }
+
+  calculatePoints(): void {
+    const activityType = this.activityForm.get('activityType')?.value;
+    const level = Number(this.activityForm.get('level')?.value);
+
+    if (!activityType) {
+      this.calculatedPoints = 0;
+      return;
+    }
+
+    switch (activityType) {
+      case 'sports':
+        this.calculatedPoints = this.sportsPointsMap[level] || 0;
+        break;
+      case 'mooc':
+        this.calculatedPoints = 50;
+        break;
+      case 'workshops':
+        this.calculatedPoints = 6;
+        break;
+      case 'internships':
+        this.calculatedPoints = 20;
+        break;
+      default:
+        this.calculatedPoints = 0;
+    }
+    
+    this.activityForm.patchValue({ points: this.calculatedPoints });
+  }
+
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
+      // Check file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        this.errorMessage = 'File size exceeds 5MB limit';
+        event.target.value = '';
+        this.selectedFile = null;
+        return;
+      }
+
+      // Check file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        this.errorMessage = 'Invalid file type. Please upload PDF, JPG, JPEG, or PNG files only';
+        event.target.value = '';
+        this.selectedFile = null;
+        return;
+      }
+
       this.selectedFile = file;
-      this.activityForm.get('certificateFile')?.setValue(file.name);
-      
-      // Extract data from PDF
-      this.extractDataFromPDF(file);
+      this.errorMessage = '';
     }
-  }
-  
-  extractDataFromPDF(file: File): void {
-    this.isLoading = true;
-    
-    // Create FormData
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    // In a real application, you would send this to a backend API for PDF text extraction
-    // For demo purposes, we'll simulate extraction with a timeout
-    setTimeout(() => {
-      // Simulated extracted data
-      this.extractedData = {
-        title: 'Certificate of Achievement',
-        eventOrganizer: 'Tech Conference 2023',
-        date: '2023-06-15',
-        description: 'Participated in the annual tech conference and completed all workshops.'
-      };
-      
-      // Populate form with extracted data
-      this.activityForm.patchValue({
-        title: this.extractedData.title,
-        eventOrganizer: this.extractedData.eventOrganizer,
-        date: this.extractedData.date,
-        description: this.extractedData.description
-      });
-      
-      this.isLoading = false;
-    }, 2000);
   }
 
   onSubmit(): void {
     if (this.activityForm.invalid || !this.selectedFile) {
-      // Mark all form controls as touched to trigger validation messages
-      Object.keys(this.activityForm.controls).forEach(key => {
-        const control = this.activityForm.get(key);
-        control?.markAsTouched();
-      });
-      
       this.errorMessage = 'Please fill in all required fields and upload a certificate.';
       return;
     }
@@ -115,42 +144,35 @@ export class ActivitySubmitComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    // Create FormData
     const formData = new FormData();
     formData.append('certificate', this.selectedFile);
+    formData.append('status', 'pending');
     
-    // Add other form values
+    // Add all form values to formData
     Object.keys(this.activityForm.value).forEach(key => {
-      if (key !== 'certificateFile') {
-        formData.append(key, this.activityForm.value[key]);
-      }
+      formData.append(key, this.activityForm.value[key]);
     });
 
-    // Submit the activity using the ActivityService
     this.activityService.submitActivity(formData).subscribe({
       next: (response) => {
         this.isSubmitting = false;
-        this.successMessage = response.message || 'Activity submitted successfully! Your certificate will be reviewed by your teacher.';
-        
-        // Reset form after successful submission
+        this.successMessage = 'Activity submitted successfully!';
         this.activityForm.reset();
         this.selectedFile = null;
         
-        // Navigate to dashboard after a delay
+        // Reset file input
+        const fileInput = document.getElementById('certificateFile') as HTMLInputElement;
+        if (fileInput) {
+          fileInput.value = '';
+        }
+        
         setTimeout(() => {
           this.router.navigate(['/activities']);
         }, 2000);
       },
       error: (error) => {
         this.isSubmitting = false;
-        console.error('Error submitting activity:', error);
         this.errorMessage = error.message || 'Failed to submit activity. Please try again.';
-        
-        // If it's an authorization error, suggest logging in again
-        if (error.message && (error.message.includes('Not authorized') || error.message.includes('token'))) {
-          this.errorMessage += ' You may need to log in again.';
-          // Add a button or link to log out and redirect to login
-        }
       }
     });
   }

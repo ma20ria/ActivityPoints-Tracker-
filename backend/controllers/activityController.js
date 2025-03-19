@@ -21,11 +21,42 @@ exports.submitActivity = async (req, res) => {
     // Get the student's class and department
     const student = await User.findById(req.user._id);
     if (!student) {
+      // Delete uploaded file if student not found
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting file:', err);
+      });
       return res.status(404).json({
         success: false,
         message: 'Student not found'
       });
     }
+
+    // Calculate points based on activity type and level
+    let points = 0;
+    switch (activityType) {
+      case 'sports':
+        const sportsPoints = {
+          1: 8,
+          2: 15,
+          3: 25,
+          4: 40,
+          5: 50
+        };
+        points = sportsPoints[level] || 0;
+        break;
+      case 'mooc':
+        points = 50;
+        break;
+      case 'workshops':
+        points = 6;
+        break;
+      case 'internships':
+        points = 20;
+        break;
+    }
+
+    // Create relative path for certificate file
+    const relativePath = req.file.path.replace(/\\/g, '/'); // Convert backslashes to forward slashes
 
     // Create activity
     const activity = await Activity.create({
@@ -35,9 +66,9 @@ exports.submitActivity = async (req, res) => {
       description,
       date,
       eventOrganizer: eventOrganizer || 'Not specified',
-      level: level || 1,
-      certificateFile: req.file.path,
-      // Include student's class and department for easier filtering
+      level: level || undefined,
+      certificateFile: relativePath,
+      points, // Save the calculated points
       studentClass: student.class,
       studentDepartment: student.department
     });
