@@ -169,4 +169,40 @@ exports.deleteUser = async (req, res) => {
       error: error.message
     });
   }
+};
+
+// @desc    Get students assigned to a teacher
+// @route   GET /api/users/teacher/:teacherId/students
+// @access  Private (Teacher)
+exports.getAssignedStudents = async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    
+    // Get the teacher's information
+    const teacher = await User.findById(teacherId);
+    if (!teacher || teacher.role !== 'teacher') {
+      return res.status(404).json({
+        success: false,
+        message: 'Teacher not found'
+      });
+    }
+
+    // Find students in the same department as the teacher
+    const students = await User.find({
+      role: 'student',
+      department: teacher.department
+    }).select('-password').sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: students.length,
+      data: students
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
 }; 

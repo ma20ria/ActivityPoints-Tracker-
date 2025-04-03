@@ -30,7 +30,7 @@ const UserSchema = new mongoose.Schema({
   },
   class: {
     type: String,
-    required: function() { return this.role === 'student'; }
+    required: function() { return this.role === 'student' || this.role === 'teacher'; }
   },
   rollNumber: {
     type: String,

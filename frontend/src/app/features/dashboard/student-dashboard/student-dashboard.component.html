@@ -66,7 +66,7 @@
             <h5 class="mb-0">Activity Status</h5>
           </div>
           <div class="card-body">
-            <div class="chart-container">
+            <div class="chart-container doughnut-container">
               <canvas baseChart
                 [data]="doughnutChartData"
                 [options]="doughnutChartOptions"
@@ -83,11 +83,11 @@
             <h5 class="mb-0">Points by Semester</h5>
           </div>
           <div class="card-body">
-            <div class="chart-container">
+            <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
               <canvas baseChart
                 [data]="barChartData"
                 [options]="barChartOptions"
-                [type]="'bar'">
+                [type]="barChartType">
               </canvas>
             </div>
           </div>

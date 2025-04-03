@@ -53,11 +53,24 @@ export class TeacherDashboardComponent implements OnInit {
   getCertificateUrl(certificateFile: string): string {
     // Ensure we have a valid certificate file path
     if (!certificateFile) {
+      console.warn('No certificate file path provided');
       return '';
     }
     
-    // The backend serves files from /uploads
-    return `http://localhost:5000/${certificateFile}`;
+    console.log('Original certificate path:', certificateFile);
+    
+    // Extract just the filename if it's a full path
+    let filename = certificateFile;
+    if (certificateFile.includes('\\')) {
+      filename = certificateFile.split('\\').pop() || '';
+    } else if (certificateFile.includes('/')) {
+      filename = certificateFile.split('/').pop() || '';
+    }
+    
+    // Construct the URL with uploads prefix
+    const finalUrl = `http://localhost:5000/uploads/${certificateFile}`;
+    console.log('Final certificate URL:', finalUrl);
+    return finalUrl;
   }
 
   loadPendingActivities(): void {

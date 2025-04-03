@@ -18,6 +18,10 @@ exports.submitActivity = async (req, res) => {
 
     const { activityType, title, description, date, eventOrganizer, level } = req.body;
 
+    // Store only the filename with certificates prefix
+    const certificateFile = `certificates/${req.file.filename}`;
+    console.log('Storing certificate path as:', certificateFile);
+
     // Get the student's class and department
     const student = await User.findById(req.user._id);
     if (!student) {
@@ -55,9 +59,6 @@ exports.submitActivity = async (req, res) => {
         break;
     }
 
-    // Create relative path for certificate file
-    const relativePath = req.file.path.replace(/\\/g, '/'); // Convert backslashes to forward slashes
-
     // Create activity
     const activity = await Activity.create({
       student: req.user._id,
@@ -67,7 +68,7 @@ exports.submitActivity = async (req, res) => {
       date,
       eventOrganizer: eventOrganizer || 'Not specified',
       level: level || undefined,
-      certificateFile: relativePath,
+      certificateFile: certificateFile,
       points, // Save the calculated points
       studentClass: student.class,
       studentDepartment: student.department

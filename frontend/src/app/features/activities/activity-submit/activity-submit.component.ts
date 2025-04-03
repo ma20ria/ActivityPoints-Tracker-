@@ -27,6 +27,7 @@ export class ActivitySubmitComponent implements OnInit {
   
   activityTypes = ['sports', 'mooc', 'workshops', 'internships'];
   levels = [1, 2, 3, 4, 5];
+  semesters = [1, 2, 3, 4, 5, 6, 7, 8];
 
   private sportsPointsMap: Record<number, number> = {
     1: 8,
@@ -50,7 +51,8 @@ export class ActivitySubmitComponent implements OnInit {
       eventOrganizer: ['', Validators.required],
       date: ['', Validators.required],
       level: [''],
-      points: [0, Validators.required]
+      points: [0, Validators.required],
+      semester: ['', [Validators.required, Validators.min(1), Validators.max(8)]]
     });
 
     // Calculate points when activity type or level changes

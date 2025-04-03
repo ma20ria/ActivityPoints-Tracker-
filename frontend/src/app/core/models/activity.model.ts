@@ -19,4 +19,5 @@ export interface Activity {
   createdAt: Date | string;
   studentClass?: string;
   studentDepartment?: string;
+  semester: number;
 } 

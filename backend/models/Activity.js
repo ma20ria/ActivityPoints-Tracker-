@@ -23,6 +23,18 @@ const ActivitySchema = new mongoose.Schema({
     type: String,
     default: 'Not specified'
   },
+  semester: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 8,
+    validate: {
+      validator: function(v) {
+        return Number.isInteger(v) && v >= 1 && v <= 8;
+      },
+      message: 'Semester must be an integer between 1 and 8'
+    }
+  },
   level: {
     type: Number,
     min: 1,

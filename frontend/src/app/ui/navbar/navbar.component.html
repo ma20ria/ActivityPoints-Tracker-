@@ -11,10 +11,10 @@
         <!-- Not logged in -->
         <ng-container *ngIf="!currentUser">
           <li class="nav-item">
-            <a class="nav-link" routerLink="/login" routerLinkActive="active">Login</a>
+            <a class="nav-link" routerLink="/auth/login" routerLinkActive="active">Login</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" routerLink="/signup" routerLinkActive="active">Sign Up</a>
+            <a class="nav-link" routerLink="/auth/signup" routerLinkActive="active">Sign Up</a>
           </li>
         </ng-container>
         
@@ -41,9 +41,6 @@
           <ng-container *ngIf="currentUser.role === 'teacher' || currentUser.role === 'superadmin'">
             <li class="nav-item" *ngIf="currentUser.role === 'superadmin'">
               <a class="nav-link" routerLink="/review" routerLinkActive="active">Review Activities</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" routerLink="/reports" routerLinkActive="active">Reports</a>
             </li>
           </ng-container>
           

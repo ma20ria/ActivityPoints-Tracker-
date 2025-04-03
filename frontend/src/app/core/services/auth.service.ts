@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, tap, catchError } from 'rxjs';
 import { User } from '../models/user.model';
 import { Router } from '@angular/router';
 
 interface AuthResponse {
+  success: boolean;
   token: string;
   user: User;
+  message?: string;
 }
 
 @Injectable({
@@ -31,14 +33,30 @@ export class AuthService {
   register(userData: any): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/register`, userData)
       .pipe(
-        tap(response => this.handleAuthentication(response))
+        tap(response => {
+          if (response.success) {
+            this.handleAuthentication(response);
+          }
+        }),
+        catchError(error => {
+          throw error.error || { message: 'Registration failed' };
+        })
       );
   }
 
   login(credentials: { email: string; password: string }): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials)
       .pipe(
-        tap(response => this.handleAuthentication(response))
+        tap(response => {
+          if (response.success) {
+            this.handleAuthentication(response);
+            this.router.navigate(['/dashboard']);
+          }
+        }),
+        catchError(error => {
+          console.error('Login error:', error);
+          throw error.error || { message: 'Login failed. Please check your credentials.' };
+        })
       );
   }
 
@@ -50,9 +68,13 @@ export class AuthService {
   }
 
   private handleAuthentication(response: AuthResponse): void {
-    localStorage.setItem('token', response.token);
-    localStorage.setItem('user', JSON.stringify(response.user));
-    this.currentUserSubject.next(response.user);
+    if (response.token) {
+      localStorage.setItem('token', response.token);
+    }
+    if (response.user) {
+      localStorage.setItem('user', JSON.stringify(response.user));
+      this.currentUserSubject.next(response.user);
+    }
   }
 
   isAuthenticated(): boolean {

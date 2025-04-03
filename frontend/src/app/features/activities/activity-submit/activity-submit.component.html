@@ -110,6 +110,24 @@
           </div>
 
           <div class="col-md-6 mb-3">
+            <label for="semester" class="form-label">Semester</label>
+            <select 
+              id="semester" 
+              formControlName="semester" 
+              class="form-input"
+              [ngClass]="{'is-invalid': activityForm.get('semester')?.invalid && activityForm.get('semester')?.touched}"
+            >
+              <option value="">Select Semester</option>
+              <option *ngFor="let sem of semesters" [value]="sem">Semester {{ sem }}</option>
+            </select>
+            <div *ngIf="activityForm.get('semester')?.invalid && activityForm.get('semester')?.touched" class="text-danger mt-1">
+              <small *ngIf="activityForm.get('semester')?.errors?.['required']">Semester is required</small>
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-6 mb-3">
             <label class="form-label">Points</label>
             <div class="form-control bg-light">
               {{ calculatedPoints }} points

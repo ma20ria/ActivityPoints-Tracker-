@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Activity } from '../models/activity.model';
+import { environment } from '../../../environments/environment';
 
 // Define the API response interfaces
 interface ApiResponse<T> {
@@ -66,11 +67,25 @@ export class ActivityService {
       );
   }
 
-  generateReport(filters?: any): Observable<ApiResponse<any>> {
-    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/report`, { params: filters })
-      .pipe(
-        catchError(this.handleError)
-      );
+  generateReport(params: { 
+    teacherId?: string;
+    studentIds?: string;
+    department?: string; 
+    class?: string;
+    semester?: string; 
+    status?: string 
+  } = {}): Observable<any> {
+    const queryParams = new URLSearchParams();
+    
+    if (params.teacherId) queryParams.append('teacherId', params.teacherId);
+    if (params.studentIds) queryParams.append('studentIds', params.studentIds);
+    if (params.department) queryParams.append('department', params.department);
+    if (params.class) queryParams.append('class', params.class);
+    if (params.semester) queryParams.append('semester', params.semester);
+    if (params.status) queryParams.append('status', params.status);
+    
+    const url = `${this.apiUrl}/report?${queryParams.toString()}`;
+    return this.http.get<any>(url);
   }
 
   private handleError(error: HttpErrorResponse) {

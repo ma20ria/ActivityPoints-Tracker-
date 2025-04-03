@@ -1,37 +1,44 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   {
     path: '',
-    loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
+    redirectTo: '/auth/login',
+    pathMatch: 'full'
   },
   {
-    path: 'login',
-    loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
+    path: 'auth',
+    loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES)
   },
   {
-    path: 'signup',
-    loadComponent: () => import('./features/auth/signup/signup.component').then(m => m.SignupComponent)
-  },
-  {
-    path: 'forgot-password',
-    loadComponent: () => import('./features/auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent)
-  },
-  {
-    path: 'reset-password/:token',
-    loadComponent: () => import('./features/auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent)
-  },
-  {
-    path: 'dashboard/student',
-    loadComponent: () => import('./features/dashboard/student-dashboard/student-dashboard.component').then(m => m.StudentDashboardComponent)
-  },
-  {
-    path: 'dashboard/teacher',
-    loadComponent: () => import('./features/dashboard/teacher-dashboard/teacher-dashboard.component').then(m => m.TeacherDashboardComponent)
+    path: 'dashboard',
+    children: [
+      {
+        path: 'student',
+        loadComponent: () => import('./features/dashboard/student-dashboard/student-dashboard.component').then(m => m.StudentDashboardComponent),
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['student'] }
+      },
+      {
+        path: 'teacher',
+        loadComponent: () => import('./features/dashboard/teacher-dashboard/teacher-dashboard.component').then(m => m.TeacherDashboardComponent),
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['teacher'] }
+      },
+      {
+        path: 'teacher/report',
+        loadComponent: () => import('./features/dashboard/teacher-dashboard/report/report.component').then(m => m.ReportComponent),
+        canActivate: [authGuard, roleGuard],
+        data: { roles: ['teacher'] }
+      }
+    ]
   },
   {
     path: 'activities',
-    loadComponent: () => import('./features/activities/activity-list/activity-list.component').then(m => m.ActivityListComponent)
+    loadChildren: () => import('./features/activities/activities.routes').then(m => m.ACTIVITIES_ROUTES),
+    canActivate: [authGuard]
   },
   {
     path: 'activities/submit',
@@ -39,10 +46,11 @@ export const routes: Routes = [
   },
   {
     path: 'profile',
-    loadComponent: () => import('./features/profile/profile-view/profile-view.component').then(m => m.ProfileViewComponent)
+    loadComponent: () => import('./features/profile/profile-view/profile-view.component').then(m => m.ProfileViewComponent),
+    canActivate: [authGuard]
   },
   {
     path: '**',
-    redirectTo: ''
+    redirectTo: '/auth/login'
   }
 ]; 
