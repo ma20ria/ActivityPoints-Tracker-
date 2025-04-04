@@ -2,11 +2,13 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NavbarComponent } from '../../../ui/navbar/navbar.component';
 import { ActivityService } from '../../../core/services/activity.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { User } from '../../../core/models/user.model';
+import { ApiResponse } from '../../../core/models/api-response.model';
+import { Activity } from '../../../core/models/activity.model';
 
 @Component({
   selector: 'app-activity-submit',
@@ -24,6 +26,7 @@ export class ActivitySubmitComponent implements OnInit {
   successMessage = '';
   selectedFile: File | null = null;
   calculatedPoints = 0;
+  today = new Date().toISOString().split('T')[0];
   
   activityTypes = ['sports', 'mooc', 'workshops', 'internships'];
   levels = [1, 2, 3, 4, 5];
@@ -41,17 +44,16 @@ export class ActivitySubmitComponent implements OnInit {
     private fb: FormBuilder,
     private authService: AuthService,
     private activityService: ActivityService,
-    private router: Router,
-    private http: HttpClient
+    private router: Router
   ) {
     this.activityForm = this.fb.group({
-      title: ['', Validators.required],
-      activityType: ['', Validators.required],
-      description: ['', Validators.required],
-      eventOrganizer: ['', Validators.required],
-      date: ['', Validators.required],
+      title: ['', [Validators.required]],
+      activityType: ['', [Validators.required]],
+      description: ['', [Validators.required]],
+      eventOrganizer: ['', [Validators.required]],
+      date: ['', [Validators.required]],
       level: [''],
-      points: [0, Validators.required],
+      points: [0],
       semester: ['', [Validators.required, Validators.min(1), Validators.max(8)]]
     });
 
@@ -68,6 +70,9 @@ export class ActivitySubmitComponent implements OnInit {
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
+    if (!this.currentUser) {
+      this.router.navigate(['/login']);
+    }
   }
 
   updateLevelValidation(): void {
@@ -75,7 +80,7 @@ export class ActivitySubmitComponent implements OnInit {
     const levelControl = this.activityForm.get('level');
 
     if (activityType === 'sports') {
-      levelControl?.setValidators([Validators.required]);
+      levelControl?.setValidators([Validators.required, Validators.min(1), Validators.max(5)]);
     } else {
       levelControl?.clearValidators();
     }
@@ -108,7 +113,7 @@ export class ActivitySubmitComponent implements OnInit {
         this.calculatedPoints = 0;
     }
     
-    this.activityForm.patchValue({ points: this.calculatedPoints });
+    this.activityForm.patchValue({ points: this.calculatedPoints }, { emitEvent: false });
   }
 
   onFileSelected(event: any): void {
@@ -137,8 +142,19 @@ export class ActivitySubmitComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.activityForm.invalid || !this.selectedFile) {
-      this.errorMessage = 'Please fill in all required fields and upload a certificate.';
+    if (this.activityForm.invalid) {
+      this.errorMessage = 'Please fill in all required fields correctly.';
+      Object.keys(this.activityForm.controls).forEach(key => {
+        const control = this.activityForm.get(key);
+        if (control?.invalid) {
+          control.markAsTouched();
+        }
+      });
+      return;
+    }
+
+    if (!this.selectedFile) {
+      this.errorMessage = 'Please upload a certificate.';
       return;
     }
 
@@ -146,19 +162,58 @@ export class ActivitySubmitComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
+    // Create FormData object
     const formData = new FormData();
-    formData.append('certificate', this.selectedFile);
-    formData.append('status', 'pending');
     
-    // Add all form values to formData
-    Object.keys(this.activityForm.value).forEach(key => {
-      formData.append(key, this.activityForm.value[key]);
+    // Add the file with the correct field name
+    console.log('File being uploaded:', this.selectedFile);
+    formData.append('certificate', this.selectedFile, this.selectedFile.name);
+    
+    // Add all form values to formData, ensuring proper type conversion
+    const formValues = this.activityForm.value;
+    console.log('Form values:', formValues);
+
+    // Append form fields with proper type conversion
+    formData.append('activityType', formValues.activityType);
+    formData.append('title', formValues.title.trim());
+    formData.append('description', formValues.description.trim());
+    formData.append('eventOrganizer', (formValues.eventOrganizer || 'Not specified').trim());
+    formData.append('date', new Date(formValues.date).toISOString());
+    formData.append('semester', formValues.semester.toString());
+    formData.append('points', this.calculatedPoints.toString());
+    
+    // Only append level for sports activities
+    if (formValues.activityType === 'sports' && formValues.level) {
+      formData.append('level', formValues.level.toString());
+    }
+
+    // Add student information
+    if (this.currentUser && this.currentUser._id && this.currentUser.name && 
+        this.currentUser.class && this.currentUser.department) {
+      formData.append('studentId', this.currentUser._id);
+      formData.append('studentName', this.currentUser.name);
+      formData.append('studentClass', this.currentUser.class);
+      formData.append('studentDepartment', this.currentUser.department);
+    } else {
+      console.error('Missing required user information');
+      this.errorMessage = 'Missing user information. Please log in again.';
+      this.isSubmitting = false;
+      return;
+    }
+
+    // Log the complete FormData
+    console.log('FormData entries:');
+    formData.forEach((value, key) => {
+      console.log(key, ':', value);
     });
 
     this.activityService.submitActivity(formData).subscribe({
-      next: (response) => {
+      next: (response: ApiResponse<Activity>) => {
+        console.log('Submission successful:', response);
         this.isSubmitting = false;
-        this.successMessage = 'Activity submitted successfully!';
+        this.successMessage = response.message || 'Activity submitted successfully! Your certificate will be reviewed by your teacher.';
+        
+        // Reset form
         this.activityForm.reset();
         this.selectedFile = null;
         
@@ -168,13 +223,39 @@ export class ActivitySubmitComponent implements OnInit {
           fileInput.value = '';
         }
         
+        // Reset form to initial state
+        this.activityForm.patchValue({
+          activityType: '',
+          level: '',
+          points: 0
+        });
+        this.calculatedPoints = 0;
+        
         setTimeout(() => {
           this.router.navigate(['/activities']);
         }, 2000);
       },
-      error: (error) => {
+      error: (error: HttpErrorResponse) => {
+        console.error('Submission error:', error);
         this.isSubmitting = false;
-        this.errorMessage = error.message || 'Failed to submit activity. Please try again.';
+        if (error.error && error.error.message) {
+          this.errorMessage = error.error.message;
+        } else if (error.status === 0) {
+          this.errorMessage = 'Unable to connect to the server. Please check your internet connection.';
+        } else if (error.status === 413) {
+          this.errorMessage = 'File size is too large. Please upload a smaller file.';
+        } else if (error.status === 500) {
+          this.errorMessage = 'Server error. Please try again later or contact support.';
+        } else {
+          this.errorMessage = 'Failed to submit activity. Please try again.';
+        }
+        // Log detailed error information
+        console.error('Error details:', {
+          status: error.status,
+          statusText: error.statusText,
+          error: error.error,
+          message: error.message
+        });
       }
     });
   }

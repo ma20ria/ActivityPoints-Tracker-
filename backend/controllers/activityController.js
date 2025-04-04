@@ -8,6 +8,15 @@ const path = require('path');
 // @access  Private (Student)
 exports.submitActivity = async (req, res) => {
   try {
+    console.log('Received activity submission request:', {
+      body: req.body,
+      file: req.file ? {
+        filename: req.file.filename,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      } : null
+    });
+
     // Check if file was uploaded
     if (!req.file) {
       return res.status(400).json({
@@ -16,7 +25,70 @@ exports.submitActivity = async (req, res) => {
       });
     }
 
-    const { activityType, title, description, date, eventOrganizer, level } = req.body;
+    // Validate file size (5MB limit)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+    if (req.file.size > MAX_FILE_SIZE) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting oversized file:', err);
+      });
+      return res.status(413).json({
+        success: false,
+        message: 'File size exceeds 5MB limit'
+      });
+    }
+
+    // Validate required fields
+    const { activityType, title, description, date, eventOrganizer, level, semester } = req.body;
+    
+    console.log('Validating fields:', {
+      activityType, title, description, date, eventOrganizer, level, semester
+    });
+    
+    if (!activityType || !title || !description || !date || !semester) {
+      // Delete uploaded file if validation fails
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting file:', err);
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required fields'
+      });
+    }
+
+    // Validate date format and range
+    const activityDate = new Date(date);
+    if (isNaN(activityDate.getTime())) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting file:', err);
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format'
+      });
+    }
+
+    // Don't allow future dates
+    if (activityDate > new Date()) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting file:', err);
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Activity date cannot be in the future'
+      });
+    }
+
+    // Validate semester
+    const semesterNum = parseInt(semester);
+    if (isNaN(semesterNum) || semesterNum < 1 || semesterNum > 8) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting file:', err);
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid semester value'
+      });
+    }
 
     // Store only the filename with certificates prefix
     const certificateFile = `certificates/${req.file.filename}`;
@@ -39,6 +111,15 @@ exports.submitActivity = async (req, res) => {
     let points = 0;
     switch (activityType) {
       case 'sports':
+        if (!level || isNaN(parseInt(level)) || parseInt(level) < 1 || parseInt(level) > 5) {
+          fs.unlink(req.file.path, (err) => {
+            if (err) console.error('Error deleting file:', err);
+          });
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid level for sports activity'
+          });
+        }
         const sportsPoints = {
           1: 8,
           2: 15,
@@ -46,7 +127,7 @@ exports.submitActivity = async (req, res) => {
           4: 40,
           5: 50
         };
-        points = sportsPoints[level] || 0;
+        points = sportsPoints[parseInt(level)] || 0;
         break;
       case 'mooc':
         points = 50;
@@ -57,7 +138,23 @@ exports.submitActivity = async (req, res) => {
       case 'internships':
         points = 20;
         break;
+      default:
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error('Error deleting file:', err);
+        });
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid activity type'
+        });
     }
+
+    console.log('Creating activity with data:', {
+      student: req.user._id,
+      activityType,
+      title,
+      points,
+      certificateFile
+    });
 
     // Create activity
     const activity = await Activity.create({
@@ -65,13 +162,14 @@ exports.submitActivity = async (req, res) => {
       activityType,
       title,
       description,
-      date,
+      date: activityDate,
       eventOrganizer: eventOrganizer || 'Not specified',
-      level: level || undefined,
-      certificateFile: certificateFile,
-      points, // Save the calculated points
+      level: activityType === 'sports' ? parseInt(level) : undefined,
+      certificateFile,
+      points,
       studentClass: student.class,
-      studentDepartment: student.department
+      studentDepartment: student.department,
+      semester: semesterNum
     });
 
     // Find teachers for this student's class and department
@@ -83,6 +181,11 @@ exports.submitActivity = async (req, res) => {
 
     const teacherCount = teachers.length;
 
+    console.log('Activity created successfully:', {
+      activityId: activity._id,
+      teacherCount
+    });
+
     res.status(201).json({
       success: true,
       data: activity,
@@ -90,6 +193,8 @@ exports.submitActivity = async (req, res) => {
       message: `Activity submitted successfully! Your certificate will be reviewed by your teacher${teacherCount > 0 ? '' : ' (Note: No teacher is currently assigned to your class)'}.`
     });
   } catch (error) {
+    console.error('Error in submitActivity:', error);
+    
     // If there was an error and a file was uploaded, delete it
     if (req.file) {
       fs.unlink(req.file.path, (err) => {
@@ -97,9 +202,18 @@ exports.submitActivity = async (req, res) => {
       });
     }
 
+    // Send appropriate error response
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid input data',
+        error: error.message
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Server Error',
+      message: 'Server error while submitting activity',
       error: error.message
     });
   }

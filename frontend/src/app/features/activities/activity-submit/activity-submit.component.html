@@ -27,7 +27,7 @@
         <div class="mb-4">
           <h5 class="mb-3">Upload Certificate</h5>
           <div class="certificate-upload-container">
-            <div class="certificate-upload-box">
+            <div class="certificate-upload-box" [class.is-invalid]="!selectedFile && activityForm.touched">
               <input 
                 type="file" 
                 id="certificateFile" 
@@ -58,7 +58,11 @@
               id="title" 
               formControlName="title" 
               class="form-input"
+              [class.is-invalid]="activityForm.get('title')?.invalid && activityForm.get('title')?.touched"
             >
+            <div *ngIf="activityForm.get('title')?.invalid && activityForm.get('title')?.touched" class="invalid-feedback">
+              Title is required
+            </div>
           </div>
           
           <div class="col-md-6 mb-3">
@@ -68,7 +72,11 @@
               id="eventOrganizer" 
               formControlName="eventOrganizer" 
               class="form-input"
+              [class.is-invalid]="activityForm.get('eventOrganizer')?.invalid && activityForm.get('eventOrganizer')?.touched"
             >
+            <div *ngIf="activityForm.get('eventOrganizer')?.invalid && activityForm.get('eventOrganizer')?.touched" class="invalid-feedback">
+              Event organizer is required
+            </div>
           </div>
         </div>
         
@@ -79,10 +87,14 @@
               id="activityType" 
               formControlName="activityType" 
               class="form-input"
+              [class.is-invalid]="activityForm.get('activityType')?.invalid && activityForm.get('activityType')?.touched"
             >
               <option value="">Select Activity Type</option>
               <option *ngFor="let type of activityTypes" [value]="type">{{ type | titlecase }}</option>
             </select>
+            <div *ngIf="activityForm.get('activityType')?.invalid && activityForm.get('activityType')?.touched" class="invalid-feedback">
+              Activity type is required
+            </div>
           </div>
           
           <div class="col-md-6 mb-3">
@@ -92,7 +104,12 @@
               id="date" 
               formControlName="date" 
               class="form-input"
+              [class.is-invalid]="activityForm.get('date')?.invalid && activityForm.get('date')?.touched"
+              [max]="today"
             >
+            <div *ngIf="activityForm.get('date')?.invalid && activityForm.get('date')?.touched" class="invalid-feedback">
+              Valid date is required
+            </div>
           </div>
         </div>
         
@@ -103,10 +120,14 @@
               id="level" 
               formControlName="level" 
               class="form-input"
+              [class.is-invalid]="activityForm.get('level')?.invalid && activityForm.get('level')?.touched"
             >
               <option value="">Select Level</option>
               <option *ngFor="let level of levels" [value]="level">Level {{ level }}</option>
             </select>
+            <div *ngIf="activityForm.get('level')?.invalid && activityForm.get('level')?.touched" class="invalid-feedback">
+              Level is required for sports activities
+            </div>
           </div>
 
           <div class="col-md-6 mb-3">
@@ -115,13 +136,16 @@
               id="semester" 
               formControlName="semester" 
               class="form-input"
-              [ngClass]="{'is-invalid': activityForm.get('semester')?.invalid && activityForm.get('semester')?.touched}"
+              [class.is-invalid]="activityForm.get('semester')?.invalid && activityForm.get('semester')?.touched"
             >
               <option value="">Select Semester</option>
               <option *ngFor="let sem of semesters" [value]="sem">Semester {{ sem }}</option>
             </select>
-            <div *ngIf="activityForm.get('semester')?.invalid && activityForm.get('semester')?.touched" class="text-danger mt-1">
-              <small *ngIf="activityForm.get('semester')?.errors?.['required']">Semester is required</small>
+            <div *ngIf="activityForm.get('semester')?.invalid && activityForm.get('semester')?.touched" class="invalid-feedback">
+              <span *ngIf="activityForm.get('semester')?.errors?.['required']">Semester is required</span>
+              <span *ngIf="activityForm.get('semester')?.errors?.['min'] || activityForm.get('semester')?.errors?.['max']">
+                Semester must be between 1 and 8
+              </span>
             </div>
           </div>
         </div>
@@ -142,7 +166,11 @@
             formControlName="description" 
             class="form-input" 
             rows="4"
+            [class.is-invalid]="activityForm.get('description')?.invalid && activityForm.get('description')?.touched"
           ></textarea>
+          <div *ngIf="activityForm.get('description')?.invalid && activityForm.get('description')?.touched" class="invalid-feedback">
+            Description is required
+          </div>
         </div>
         
         <div class="d-grid gap-2 mt-4">
@@ -151,7 +179,9 @@
             class="btn btn-primary" 
             [disabled]="activityForm.invalid || isSubmitting || !selectedFile"
           >
-            <span *ngIf="isSubmitting">Submitting...</span>
+            <span *ngIf="isSubmitting">
+              <i class="bi bi-arrow-repeat spin me-2"></i>Submitting...
+            </span>
             <span *ngIf="!isSubmitting">Submit Activity</span>
           </button>
         </div>
