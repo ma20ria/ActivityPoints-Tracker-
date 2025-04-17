@@ -47,6 +47,9 @@ export class SignupComponent {
       rollNumber: [''],
       teacherClass: ['']
     }, { validators: this.passwordMatchValidator });
+
+    // Set initial validators based on role
+    this.onRoleChange();
   }
 
   passwordMatchValidator(form: FormGroup) {
@@ -109,11 +112,19 @@ export class SignupComponent {
     this.authService.register(userData).subscribe({
       next: (response) => {
         this.isLoading = false;
-        this.router.navigate(['/dashboard', response.user.role]);
+        if (response.success) {
+          this.router.navigate(['/auth/login']);
+        } else {
+          this.errorMessage = response.message || 'Registration failed. Please try again.';
+        }
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = error.error.message || 'Registration failed. Please try again.';
+        if (error.error?.message?.includes('already exists')) {
+          this.errorMessage = 'This email is already registered. Please use a different email.';
+        } else {
+          this.errorMessage = error.error?.message || 'Registration failed. Please try again.';
+        }
       }
     });
   }

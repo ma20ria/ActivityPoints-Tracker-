@@ -187,10 +187,11 @@ exports.getAssignedStudents = async (req, res) => {
       });
     }
 
-    // Find students in the same department as the teacher
+    // Find students in the same department and class as the teacher
     const students = await User.find({
       role: 'student',
-      department: teacher.department
+      department: teacher.department,
+      class: teacher.class
     }).select('-password').sort({ name: 1 });
 
     res.status(200).json({

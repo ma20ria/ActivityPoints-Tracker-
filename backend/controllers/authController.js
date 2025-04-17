@@ -16,25 +16,41 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password, role, department, semester, class: className, rollNumber } = req.body;
 
+    // Validate required fields
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide all required fields' 
+      });
+    }
+
     // Check if user already exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists'
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'This email is already registered' 
       });
     }
 
     // Validate role
     if (role === 'superadmin') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot register as superadmin'
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot register as superadmin' 
       });
     }
 
-    // Create user
-    const user = await User.create({
+    // Validate student-specific fields
+    if (role === 'student' && (!department || !semester || !className || !rollNumber)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide all required student information' 
+      });
+    }
+
+    // Create new user
+    const user = new User({
       name,
       email,
       password,
@@ -45,24 +61,34 @@ exports.register = async (req, res) => {
       rollNumber
     });
 
-    // Generate token
-    const token = generateToken(user._id);
+    await user.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
     res.status(201).json({
       success: true,
       token,
       user: {
-        _id: user._id,
+        id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        department: user.department,
+        semester: user.semester,
+        class: user.class,
+        rollNumber: user.rollNumber
       }
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
+    console.error('Registration error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Registration failed. Please try again.' 
     });
   }
 };

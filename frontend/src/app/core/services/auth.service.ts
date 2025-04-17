@@ -39,6 +39,9 @@ export class AuthService {
           }
         }),
         catchError(error => {
+          if (error.error?.message?.includes('already exists')) {
+            throw { error: { message: 'User already exists' } };
+          }
           throw error.error || { message: 'Registration failed' };
         })
       );
@@ -64,7 +67,7 @@ export class AuthService {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     this.currentUserSubject.next(null);
-    this.router.navigate(['/login']);
+    this.router.navigate(['/auth/login']);
   }
 
   private handleAuthentication(response: AuthResponse): void {

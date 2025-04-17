@@ -249,13 +249,9 @@ exports.getPendingActivities = async (req, res) => {
     // Find students in the teacher's class/department
     const teacherQuery = { 
       role: 'student',
-      department: req.user.department
+      department: req.user.department,
+      class: req.user.class
     };
-    
-    // If teacher has a class assigned, filter by that class too
-    if (req.user.class) {
-      teacherQuery.class = req.user.class;
-    }
     
     const students = await User.find(teacherQuery)
       .select('_id name email rollNumber class semester department');
@@ -399,6 +395,8 @@ exports.generateReport = async (req, res) => {
     } else if (req.user.role === 'teacher') {
       // If teacher and no department specified, use teacher's department
       studentQuery.department = req.user.department;
+      // Also filter by teacher's class
+      studentQuery.class = req.user.class;
     }
     
     if (semester) {
